@@ -1,0 +1,225 @@
+# Config chung cho pipeline MapTR Phenikaa.
+#
+# Cach dung:
+#   1. Sua cac gia tri trong file nay.
+#   2. Chay:
+#      /home/khanh247/miniconda3/envs/maptr/bin/python \
+#      /home/khanh247/Documents/Survey/phd/phenikaa/benchmark_maptr/30_run_pipeline_from_config.py
+#
+# Quy uoc du lieu dau vao:
+#   data_root/
+#     CAMERA/
+#       CAM_P_F/*.jpg
+#       CAM_P_FL/*.jpg
+#       ...
+#       CAM_F_B/*.jpg
+#     dump/
+#       frames/laz/*.laz
+#       traj_lidar.txt
+#
+# Neu chay data moi, thuong chi can sua:
+#   scenario.name
+#   scenario.data_root
+#   paths.final_dir
+#   build_infos.max_samples
+#   inference.num_samples
+
+project:
+  phenikaa_root: /home/khanh247/Documents/Survey/phd/phenikaa
+  conda_python: /home/khanh247/miniconda3/envs/maptr/bin/python
+  maptr_root: ${PHENIKAA_ROOT}/benchmark_maptr/vendor/MapTR
+
+scenario:
+  # Ten logic cua bo data, dung de dat ten output.
+  # Vi du: Normal, road_work_traffic, big_road, rain, traffic_jam.
+  name: road_work_traffic
+
+  # Duong dan data thuc te. Neu de trong/null, script se dung:
+  # ${PHENIKAA_ROOT}/data/${SCENARIO}
+  # Nen dat ro rang de tranh nham scenario.
+  data_root: ${PHENIKAA_ROOT}/data/${SCENARIO}
+
+  # Checkpoint dang lay tu bo nao da train.
+  # Neu model train tren Normal thi giu Normal, du ban inference tren scenario khac.
+  checkpoint_scenario: Normal
+
+paths:
+  # Config model MapTR 12 camera.
+  model_config: ${PHENIKAA_ROOT}/benchmark_maptr/config/maptr_tiny_r50_phenikaa_12cam_train_osm.py
+
+  # GT OSM da ve theo GT_OSM_DRAWING_GUIDE.md.
+  gt_osm: ${DATA_ROOT}/${SCENARIO}.osm
+
+  # Checkpoint khoi tao 12 camera/6 class, tao tu checkpoint MapTR goc va bo head cu.
+  init_checkpoint: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${SCENARIO}/ckpts/maptr_init_12cam_partial.pth
+
+  # Checkpoint sau train. Doi duong dan nay neu muon dung epoch khac thay vi latest.pth.
+  checkpoint: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${CHECKPOINT_SCENARIO}/work_dirs/maptr_12cam_osm/latest.pth
+
+  # File .pkl manifest cho data dang chay.
+  # File nay KHONG phai GT. No chua danh sach sample: 12 anh, calib, pose, lidar da sync.
+  infos: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${SCENARIO}/phenikaa_maptr_infos_full.pkl
+
+  # Thu muc output cuoi cung. Nen moi scenario/lan chay co mot final_dir rieng.
+  final_dir: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${SCENARIO}/final_run/no_metric_full_data
+
+  # Thu muc tam cho inference theo tung frame. Thuong khong can xem truc tiep.
+  intermediate_dir: ${FINAL_DIR}/_intermediate
+
+raw_qa:
+  enabled: true
+  max_camera_dt_sec: 0.025
+  max_image_checks: 24
+
+pose_qa:
+  enabled: true
+  max_dt_sec: 0.20
+  max_speed_mps: 30.0
+  max_yaw_rate_dps: 120.0
+
+gt_qa:
+  enabled: true
+  # false = van cho fallback voi file cu thieu semantic_class.
+  # true = semantic_class bat buoc cho cac way train/topology.
+  strict_missing_semantic: false
+
+build_infos:
+  # Infos moi dung ego/base_link thuc te cua xe.
+  # Sau khi doi frame lidar_top -> base_link, can tao lai infos train va train lai
+  # checkpoint neu muon model hoc/predict dung he base_link.
+  # true: tao lai infos, anh undistorted, lidar synced.
+  # false: dung lai paths.infos neu da ton tai.
+  rebuild: true
+
+  # split chi de dat token/ten output. Voi inference full data co the de "full".
+  split: full
+
+  # Bat dau lay anh tu index nao cua reference camera CAM_P_F.
+  start_index: 0
+
+  # 0 = full data.
+  # Dat 20/200 neu muon test nhanh truoc.
+  max_samples: 0
+
+  # In tien trinh moi N sample hop le.
+  # Neu thay terminal im lang qua lau, giam xuong 1 de xem tung sample.
+  progress_every: 10
+
+  # Neu 12 camera da co timestamp giong nhau, dat nho nhu 0.001.
+  # Neu data co sai lech nho giua cac camera, co the tang len 0.02-0.05.
+  # Tang qua lon se co nguy co gom anh khac thoi diem.
+  max_camera_dt_sec: 0.001
+
+  # Chi dung de canh bao LiDAR nguon gan camera bao nhieu.
+  # Point cloud van duoc warp bang ego trajectory ve dung t_cam.
+  warn_lidar_dt_sec: 0.05
+
+  # undistorted: tao anh da nan phang bang K/D roi luu K moi vao pkl.
+  # raw: dung anh goc, chi nen dung de debug.
+  image_mode: undistorted
+
+  # true: ghi de lidar synced da co, cham hon nhung chac chan cap nhat lai.
+  # false: neu file synced ton tai thi dung lai, nhanh hon.
+  overwrite_synced_lidar: false
+
+train:
+  # Mac dinh false de `--steps all` trong pipeline co the dry-run/check truoc.
+  # Khi muon train that, doi thanh true hoac chay tung buoc den check_dataset truoc roi bat train.
+  enabled: false
+  make_config: true
+  make_init_checkpoint: true
+  check_dataset: true
+  check_num_samples: 30
+  source_checkpoint: ${PHENIKAA_ROOT}/third_party/MapTR/ckpts/maptrv2_nusc_r50_24ep.pth
+  work_dir: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${SCENARIO}/work_dirs/maptr_12cam_osm
+  max_epochs: 12
+  lr: 0.0002
+  image_scale: 0.25
+  samples_per_gpu: 1
+  workers_per_gpu: 1
+  gpus: 1
+
+inference:
+  enabled: true
+  start_index: 0
+
+  # 0 = inference toan bo infos.
+  # Dat 20/200 neu muon xem nhanh.
+  num_samples: 0
+
+  # Nguong score khi luu/ve prediction.
+  # Tang len: it duong rac hon, nhung co the mat vach yeu.
+  # Giam xuong: thay nhieu duong hon, nhung nhieu nhieu hon.
+  score_thresh: 0.30
+
+  # Scale anh vao model. 0.25 nhe GPU hon.
+  # Tang len 0.5/1.0 co the ro hon nhung ton VRAM hon.
+  image_scale: 0.25
+
+  workers_per_gpu: 0
+
+  # true = chay thuc te khong can GT.
+  # false = chi dung khi infos co GT va muon visualize GT trong inference.
+  no_gt: true
+
+export_osm:
+  enabled: true
+
+  # Nguong score khi xuat OSM.
+  # Thuong nen cao hon inference.score_thresh de file OSM bot day.
+  score_thresh: 0.45
+
+  # graph giu hinh hoc tung vector tot hon: duong cong, nhanh re, crosswalk, speed bump.
+  graph:
+    enabled: true
+    out_osm: ${FINAL_DIR}/predicted_vector_map_graph.osm
+    min_length_m: 0.40
+    dedup_chamfer_m: 0.65
+    dedup_cell_m: 2.0
+    sample_step: 1
+    max_lines: 0
+
+  # thin gom cac duong trung nhau thanh it duong dai hon.
+  # File nhe hon, nhung co the lam mat duong re/vach ngan.
+  thin:
+    enabled: true
+    out_osm: ${FINAL_DIR}/predicted_vector_map_thin.osm
+    lateral_bin_m: 0.25
+    min_lateral_bin_ratio: 0.02
+    min_lateral_cluster_points: 500
+    s_bin_m: 1.0
+    min_bin_observations: 3
+    min_line_points: 8
+    smooth_window: 7
+    # Mac dinh tat vi relation lanelet tu prediction nhieu frame rat de noi cheo lung tung.
+    # Bat true chi khi boundary da sach va song song on dinh.
+    create_lanelet_relations: false
+
+visualize:
+  enabled: true
+  start: 0
+
+  # So sample tao anh visualize. 20 de xem nhanh; 0 = toan bo prediction.
+  max_samples: 20
+
+  score_thresh: 0.30
+
+  # Anh paper_style co 12 camera nen cam_width lon se tao file anh rat nang.
+  cam_width: 320
+
+  # Kich thuoc anh BEV map.
+  map_width: 900
+  map_height: 1600
+
+  paper_out_dir: ${FINAL_DIR}/visualizations/paper_style
+  map_out_dir: ${FINAL_DIR}/visualizations/map_style
+
+runtime:
+  cuda_visible_devices: "0"
+  pytorch_cuda_alloc_conf: max_split_size_mb:64
+
+  # Cac duong dan lib de tranh loi CUDA/MMCV trong moi truong maptr.
+  ld_library_path_extra:
+    - /usr/local/cuda/lib64
+    - /usr/local/cuda-12.8/lib64
+    - /home/khanh247/miniconda3/envs/maptr/lib

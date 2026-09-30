@@ -1,0 +1,11 @@
+# Conda env cho MapTRv2 (B1+). Pip wheels torch/mmcv cài thêm theo requirements-maptr.txt
+name: maptr
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - pip:
+      # Chỉ tạo skeleton; sau `conda env create` chạy tiếp lệnh trong
+      # requirements-maptr.txt (phần comment đầu file) để cài torch/mmcv/mmdet3d.
+      - -r requirements-maptr.txt

@@ -1,0 +1,14 @@
+# Phenikaa tooling + tutorials (B0) — LO_TRINH.md
+# MapTR train/eval (B1+) dùng env riêng: third_party/MapTR/requirement.txt
+#
+# Tạo env:
+#   conda create -n phenikaa python=3.10 -y
+#   conda activate phenikaa
+#   pip install -r requirements.txt
+#   pip install --no-deps opencv-python==4.9.0.80
+
+numpy==1.26.4
+scipy==1.13.1
+laspy[lazrs]==2.5.4
+open3d==0.18.0
+# opencv-python cài riêng với --no-deps (tránh pip kéo numpy 2.x)

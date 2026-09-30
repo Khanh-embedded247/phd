@@ -1,0 +1,10 @@
+# Phenikaa project — local / generated
+outputs/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+*.egg-info/
+data/phenikaa/infos_*.pkl
+notebooks/.ipynb_checkpoints/
