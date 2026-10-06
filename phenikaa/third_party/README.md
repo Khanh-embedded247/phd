@@ -1,23 +1,6 @@
-# MapTR / MapTRv2 — ghi chú env trong dự án Phenikaa
+# Third Party Code
 
-## Dùng nhánh nào?
+- `MapTR_phenikaa/`: ban MapTR dang duoc pipeline su dung. Ban nay co sua dataset/parser de doc GT OSM Phenikaa va 6 class.
+- `MapTR/`: ban MapTR goc/doi chieu, hien van giu checkpoint pretrained trong `MapTR/ckpts`.
 
-- Repo opensource: [hustvl/MapTR](https://github.com/hustvl/MapTR)
-- Đồ án dùng branch **`maptrv2`**
-- Code: `phenikaa/third_party/MapTR/` (một chỗ)
-
-## Conda env `maptr`
-
-| File | Vai trò |
-|------|---------|
-| [`../requirements-maptr.txt`](../requirements-maptr.txt) | **Chính** — pip deps + hướng dẫn cài torch/mmcv/mmdet3d |
-| [`../environment-maptr.yml`](../environment-maptr.yml) | Tạo env `python=3.8` rồi làm tiếp theo file trên |
-| `MapTR/docs/install.md` | Upstream gốc |
-| `MapTR/requirement.txt` | Extras nhỏ upstream (shapely/av2) |
-
-```bash
-conda activate maptr
-cd /home/khanh247/Documents/Survey/phenikaa/third_party/MapTR
-```
-
-Env `phenikaa` → [`../requirements.txt`](../requirements.txt) — chỉ B0 / tutorials.
+Luu y: khong xoa `MapTR/ckpts` neu chua copy checkpoint sang noi khac.

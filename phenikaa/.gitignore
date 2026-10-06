@@ -1,10 +1,71 @@
-# Phenikaa project — local / generated
-outputs/
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 .pytest_cache/
-.venv/
+.mypy_cache/
+.ruff_cache/
 *.egg-info/
-data/phenikaa/infos_*.pkl
+.venv/
+venv/
+.env
+.env.*
+
+# Jupyter
+.ipynb_checkpoints/
 notebooks/.ipynb_checkpoints/
+
+# Data: never commit raw/processed/external datasets
+/data/**
+!/data/
+!/data/README.md
+!/data/raw/
+!/data/raw/README.md
+!/data/processed/
+!/data/processed/README.md
+!/data/external/
+!/data/external/README.md
+
+# Outputs, experiments, and model weights
+/outputs/
+/experiments/**
+!/experiments/
+!/experiments/README.md
+/checkpoints/**
+!/checkpoints/
+!/checkpoints/README.md
+*.pth
+*.pt
+*.ckpt
+*.pkl
+*.pickle
+*.npz
+*.npy
+*.onnx
+*.engine
+*.bag
+*.laz
+*.las
+*.pcd
+
+# Logs and runtime artifacts
+*.log
+*.log.json
+*.tmp
+*.cache
+wandb/
+runs/
+mlruns/
+tensorboard/
+
+# Generated media can be large; keep curated final figures manually if needed
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

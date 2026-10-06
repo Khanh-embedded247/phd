@@ -1,0 +1,518 @@
+# Legacy inference config kept for comparison; canonical configs live in configs/maptr/.
+# Config MapTR cho Phenikaa VF6_02, 12 camera, USE_GT=False.
+#
+# Chay tu MapTR root de plugin_dir='projects/mmdet3d_plugin/' dung:
+#   cd /home/khanh247/Documents/Survey/phd/phenikaa/third_party/MapTR_phenikaa
+#
+# File nay chi phuc vu smoke test / inference input pipeline.
+# Khi co GT lanelet/vector map, can tao config khac bat USE_GT=True va map_ann_file.
+
+PHENIKAA_USE_GT = False
+PHENIKAA_NUM_CAMS = 12
+PHENIKAA_CAMERA_ORDER = ['CAM_P_F', 'CAM_P_FL', 'CAM_P_FR', 'CAM_P_B', 'CAM_P_L', 'CAM_P_R', 'CAM_P_LB', 'CAM_P_RB', 'CAM_F_F', 'CAM_F_L', 'CAM_F_R', 'CAM_F_B']
+PHENIKAA_INFOS = '/home/khanh247/Documents/Survey/phd/phenikaa/outputs/only_camera/Normal/phenikaa_maptr_infos_val.pkl'
+
+# data_root nay dung cho NuScenesMap init trong dataset goc.
+# Duong dan anh/LiDAR that da nam absolute trong PHENIKAA_INFOS.
+data_root = '/home/khanh247/Documents/Survey/phd/phenikaa/data/raw/nuscenes/raw/'
+
+
+point_cloud_range = [-15.0, -30.0, -2.0, 15.0, 30.0, 2.0]
+
+class_names = ['car',
+ 'truck',
+ 'construction_vehicle',
+ 'bus',
+ 'trailer',
+ 'barrier',
+ 'motorcycle',
+ 'bicycle',
+ 'pedestrian',
+ 'traffic_cone']
+
+dataset_type = 'CustomNuScenesLocalMapDataset'
+
+data_root = 'data/raw/nuscenes/'
+
+input_modality = {'use_lidar': False, 'use_camera': True, 'use_radar': False, 'use_map': False, 'use_external': True}
+
+file_client_args = {'backend': 'disk'}
+
+train_pipeline = [{'type': 'LoadMultiViewImageFromFiles', 'to_float32': True},
+ {'type': 'PhotoMetricDistortionMultiViewImage'},
+ {'type': 'LoadAnnotations3D',
+  'with_bbox_3d': True,
+  'with_label_3d': True,
+  'with_attr_label': False},
+ {'type': 'ObjectRangeFilter', 'point_cloud_range': [-15.0, -30.0, -2.0, 15.0, 30.0, 2.0]},
+ {'type': 'ObjectNameFilter',
+  'classes': ['car',
+              'truck',
+              'construction_vehicle',
+              'bus',
+              'trailer',
+              'barrier',
+              'motorcycle',
+              'bicycle',
+              'pedestrian',
+              'traffic_cone']},
+ {'type': 'NormalizeMultiviewImage',
+  'mean': [123.675, 116.28, 103.53],
+  'std': [58.395, 57.12, 57.375],
+  'to_rgb': True},
+ {'type': 'RandomScaleImageMultiViewImage', 'scales': [0.5]},
+ {'type': 'PadMultiViewImage', 'size_divisor': 32},
+ {'type': 'DefaultFormatBundle3D',
+  'class_names': ['car',
+                  'truck',
+                  'construction_vehicle',
+                  'bus',
+                  'trailer',
+                  'barrier',
+                  'motorcycle',
+                  'bicycle',
+                  'pedestrian',
+                  'traffic_cone']},
+ {'type': 'CustomCollect3D', 'keys': ['gt_bboxes_3d', 'gt_labels_3d', 'img']}]
+
+test_pipeline = [{'type': 'LoadMultiViewImageFromFiles', 'to_float32': True},
+ {'type': 'NormalizeMultiviewImage',
+  'mean': [123.675, 116.28, 103.53],
+  'std': [58.395, 57.12, 57.375],
+  'to_rgb': True},
+ {'type': 'MultiScaleFlipAug3D',
+  'img_scale': (1600, 900),
+  'pts_scale_ratio': 1,
+  'flip': False,
+  'transforms': [{'type': 'RandomScaleImageMultiViewImage', 'scales': [0.5]},
+                 {'type': 'PadMultiViewImage', 'size_divisor': 32},
+                 {'type': 'DefaultFormatBundle3D',
+                  'class_names': ['car',
+                                  'truck',
+                                  'construction_vehicle',
+                                  'bus',
+                                  'trailer',
+                                  'barrier',
+                                  'motorcycle',
+                                  'bicycle',
+                                  'pedestrian',
+                                  'traffic_cone'],
+                  'with_label': False},
+                 {'type': 'CustomCollect3D', 'keys': ['img']}]}]
+
+eval_pipeline = [{'type': 'LoadPointsFromFile',
+  'coord_type': 'LIDAR',
+  'load_dim': 5,
+  'use_dim': 5,
+  'file_client_args': {'backend': 'disk'}},
+ {'type': 'LoadPointsFromMultiSweeps', 'sweeps_num': 10, 'file_client_args': {'backend': 'disk'}},
+ {'type': 'DefaultFormatBundle3D',
+  'class_names': ['car',
+                  'truck',
+                  'trailer',
+                  'bus',
+                  'construction_vehicle',
+                  'bicycle',
+                  'motorcycle',
+                  'pedestrian',
+                  'traffic_cone',
+                  'barrier'],
+  'with_label': False},
+ {'type': 'Collect3D', 'keys': ['points']}]
+
+data = {'samples_per_gpu': 1,
+ 'workers_per_gpu': 1,
+ 'train': {'type': 'CustomNuScenesLocalMapDataset',
+           'data_root': '/home/khanh247/Documents/Survey/phd/phenikaa/data/raw/nuscenes/raw/',
+           'ann_file': '/home/khanh247/Documents/Survey/phd/phenikaa/outputs/only_camera/Normal/phenikaa_maptr_infos_val.pkl',
+           'map_ann_file': None,
+           'pipeline': [{'type': 'LoadMultiViewImageFromFiles', 'to_float32': True},
+                        {'type': 'NormalizeMultiviewImage',
+                         'mean': [123.675, 116.28, 103.53],
+                         'std': [58.395, 57.12, 57.375],
+                         'to_rgb': True},
+                        {'type': 'MultiScaleFlipAug3D',
+                         'img_scale': (1600, 900),
+                         'pts_scale_ratio': 1,
+                         'flip': False,
+                         'transforms': [{'type': 'RandomScaleImageMultiViewImage', 'scales': [0.5]},
+                                        {'type': 'PadMultiViewImage', 'size_divisor': 32},
+                                        {'type': 'DefaultFormatBundle3D',
+                                         'class_names': ['car',
+                                                         'truck',
+                                                         'construction_vehicle',
+                                                         'bus',
+                                                         'trailer',
+                                                         'barrier',
+                                                         'motorcycle',
+                                                         'bicycle',
+                                                         'pedestrian',
+                                                         'traffic_cone'],
+                                         'with_label': False},
+                                        {'type': 'CustomCollect3D', 'keys': ['img']}]}],
+           'bev_size': (200, 100),
+           'pc_range': [-15.0, -30.0, -2.0, 15.0, 30.0, 2.0],
+           'fixed_ptsnum_per_line': 20,
+           'eval_use_same_gt_sample_num_flag': True,
+           'padding_value': -10000,
+           'map_classes': ['divider', 'ped_crossing', 'boundary'],
+           'classes': ['car',
+                       'truck',
+                       'construction_vehicle',
+                       'bus',
+                       'trailer',
+                       'barrier',
+                       'motorcycle',
+                       'bicycle',
+                       'pedestrian',
+                       'traffic_cone'],
+           'modality': {'use_lidar': False,
+                        'use_camera': True,
+                        'use_radar': False,
+                        'use_map': False,
+                        'use_external': True},
+           'test_mode': True},
+ 'val': {'type': 'CustomNuScenesLocalMapDataset',
+         'data_root': '/home/khanh247/Documents/Survey/phd/phenikaa/data/raw/nuscenes/raw/',
+         'ann_file': '/home/khanh247/Documents/Survey/phd/phenikaa/outputs/only_camera/Normal/phenikaa_maptr_infos_val.pkl',
+         'map_ann_file': None,
+         'pipeline': [{'type': 'LoadMultiViewImageFromFiles', 'to_float32': True},
+                      {'type': 'NormalizeMultiviewImage',
+                       'mean': [123.675, 116.28, 103.53],
+                       'std': [58.395, 57.12, 57.375],
+                       'to_rgb': True},
+                      {'type': 'MultiScaleFlipAug3D',
+                       'img_scale': (1600, 900),
+                       'pts_scale_ratio': 1,
+                       'flip': False,
+                       'transforms': [{'type': 'RandomScaleImageMultiViewImage', 'scales': [0.5]},
+                                      {'type': 'PadMultiViewImage', 'size_divisor': 32},
+                                      {'type': 'DefaultFormatBundle3D',
+                                       'class_names': ['car',
+                                                       'truck',
+                                                       'construction_vehicle',
+                                                       'bus',
+                                                       'trailer',
+                                                       'barrier',
+                                                       'motorcycle',
+                                                       'bicycle',
+                                                       'pedestrian',
+                                                       'traffic_cone'],
+                                       'with_label': False},
+                                      {'type': 'CustomCollect3D', 'keys': ['img']}]}],
+         'bev_size': (200, 100),
+         'pc_range': [-15.0, -30.0, -2.0, 15.0, 30.0, 2.0],
+         'fixed_ptsnum_per_line': 20,
+         'eval_use_same_gt_sample_num_flag': True,
+         'padding_value': -10000,
+         'map_classes': ['divider', 'ped_crossing', 'boundary'],
+         'classes': ['car',
+                     'truck',
+                     'construction_vehicle',
+                     'bus',
+                     'trailer',
+                     'barrier',
+                     'motorcycle',
+                     'bicycle',
+                     'pedestrian',
+                     'traffic_cone'],
+         'modality': {'use_lidar': False,
+                      'use_camera': True,
+                      'use_radar': False,
+                      'use_map': False,
+                      'use_external': True},
+         'test_mode': True},
+ 'test': {'type': 'CustomNuScenesLocalMapDataset',
+          'data_root': '/home/khanh247/Documents/Survey/phd/phenikaa/data/raw/nuscenes/raw/',
+          'ann_file': '/home/khanh247/Documents/Survey/phd/phenikaa/outputs/only_camera/Normal/phenikaa_maptr_infos_val.pkl',
+          'map_ann_file': None,
+          'pipeline': [{'type': 'LoadMultiViewImageFromFiles', 'to_float32': True},
+                       {'type': 'NormalizeMultiviewImage',
+                        'mean': [123.675, 116.28, 103.53],
+                        'std': [58.395, 57.12, 57.375],
+                        'to_rgb': True},
+                       {'type': 'MultiScaleFlipAug3D',
+                        'img_scale': (1600, 900),
+                        'pts_scale_ratio': 1,
+                        'flip': False,
+                        'transforms': [{'type': 'RandomScaleImageMultiViewImage', 'scales': [0.5]},
+                                       {'type': 'PadMultiViewImage', 'size_divisor': 32},
+                                       {'type': 'DefaultFormatBundle3D',
+                                        'class_names': ['car',
+                                                        'truck',
+                                                        'construction_vehicle',
+                                                        'bus',
+                                                        'trailer',
+                                                        'barrier',
+                                                        'motorcycle',
+                                                        'bicycle',
+                                                        'pedestrian',
+                                                        'traffic_cone'],
+                                        'with_label': False},
+                                       {'type': 'CustomCollect3D', 'keys': ['img']}]}],
+          'bev_size': (200, 100),
+          'pc_range': [-15.0, -30.0, -2.0, 15.0, 30.0, 2.0],
+          'fixed_ptsnum_per_line': 20,
+          'eval_use_same_gt_sample_num_flag': True,
+          'padding_value': -10000,
+          'map_classes': ['divider', 'ped_crossing', 'boundary'],
+          'classes': ['car',
+                      'truck',
+                      'construction_vehicle',
+                      'bus',
+                      'trailer',
+                      'barrier',
+                      'motorcycle',
+                      'bicycle',
+                      'pedestrian',
+                      'traffic_cone'],
+          'modality': {'use_lidar': False,
+                       'use_camera': True,
+                       'use_radar': False,
+                       'use_map': False,
+                       'use_external': True},
+          'test_mode': True},
+ 'shuffler_sampler': {'type': 'DistributedGroupSampler'},
+ 'nonshuffler_sampler': {'type': 'DistributedSampler'}}
+
+evaluation = {'interval': 1,
+ 'pipeline': [{'type': 'LoadMultiViewImageFromFiles', 'to_float32': True},
+              {'type': 'NormalizeMultiviewImage',
+               'mean': [123.675, 116.28, 103.53],
+               'std': [58.395, 57.12, 57.375],
+               'to_rgb': True},
+              {'type': 'MultiScaleFlipAug3D',
+               'img_scale': (1600, 900),
+               'pts_scale_ratio': 1,
+               'flip': False,
+               'transforms': [{'type': 'RandomScaleImageMultiViewImage', 'scales': [0.5]},
+                              {'type': 'PadMultiViewImage', 'size_divisor': 32},
+                              {'type': 'DefaultFormatBundle3D',
+                               'class_names': ['car',
+                                               'truck',
+                                               'construction_vehicle',
+                                               'bus',
+                                               'trailer',
+                                               'barrier',
+                                               'motorcycle',
+                                               'bicycle',
+                                               'pedestrian',
+                                               'traffic_cone'],
+                               'with_label': False},
+                              {'type': 'CustomCollect3D', 'keys': ['img']}]}],
+ 'metric': None}
+
+checkpoint_config = {'interval': 1}
+
+log_config = {'interval': 50, 'hooks': [{'type': 'TextLoggerHook'}, {'type': 'TensorboardLoggerHook'}]}
+
+dist_params = {'backend': 'nccl'}
+
+log_level = 'INFO'
+
+work_dir = None
+
+load_from = None
+
+resume_from = None
+
+workflow = [('train', 1)]
+
+plugin = True
+
+plugin_dir = 'projects/mmdet3d_plugin/'
+
+voxel_size = [0.15, 0.15, 4]
+
+img_norm_cfg = {'mean': [123.675, 116.28, 103.53], 'std': [58.395, 57.12, 57.375], 'to_rgb': True}
+
+map_classes = ['divider', 'ped_crossing', 'boundary']
+
+fixed_ptsnum_per_gt_line = 20
+
+fixed_ptsnum_per_pred_line = 20
+
+eval_use_same_gt_sample_num_flag = True
+
+num_map_classes = 3
+
+_dim_ = 256
+
+_pos_dim_ = 128
+
+_ffn_dim_ = 512
+
+_num_levels_ = 1
+
+bev_h_ = 200
+
+bev_w_ = 100
+
+queue_length = 1
+
+model = {'type': 'MapTR',
+ 'use_grid_mask': True,
+ 'video_test_mode': False,
+ 'pretrained': {'img': 'ckpts/resnet50-19c8e357.pth'},
+ 'img_backbone': {'type': 'ResNet',
+                  'depth': 50,
+                  'num_stages': 4,
+                  'out_indices': (3,),
+                  'frozen_stages': 1,
+                  'norm_cfg': {'type': 'BN', 'requires_grad': False},
+                  'norm_eval': True,
+                  'style': 'pytorch'},
+ 'img_neck': {'type': 'FPN',
+              'in_channels': [2048],
+              'out_channels': 256,
+              'start_level': 0,
+              'add_extra_convs': 'on_output',
+              'num_outs': 1,
+              'relu_before_extra_convs': True},
+ 'pts_bbox_head': {'type': 'MapTRHead',
+                   'bev_h': 200,
+                   'bev_w': 100,
+                   'num_query': 900,
+                   'num_vec': 50,
+                   'num_pts_per_vec': 20,
+                   'num_pts_per_gt_vec': 20,
+                   'dir_interval': 1,
+                   'query_embed_type': 'instance_pts',
+                   'transform_method': 'minmax',
+                   'gt_shift_pts_pattern': 'v2',
+                   'num_classes': 3,
+                   'in_channels': 256,
+                   'sync_cls_avg_factor': True,
+                   'with_box_refine': True,
+                   'as_two_stage': False,
+                   'code_size': 2,
+                   'code_weights': [1.0, 1.0, 1.0, 1.0],
+                   'transformer': {'type': 'MapTRPerceptionTransformer',
+                                   'rotate_prev_bev': True,
+                                   'use_shift': True,
+                                   'use_can_bus': True,
+                                   'embed_dims': 256,
+                                   'encoder': {'type': 'BEVFormerEncoder',
+                                               'num_layers': 1,
+                                               'pc_range': [-15.0, -30.0, -2.0, 15.0, 30.0, 2.0],
+                                               'num_points_in_pillar': 4,
+                                               'return_intermediate': False,
+                                               'transformerlayers': {'type': 'BEVFormerLayer',
+                                                                     'attn_cfgs': [{'type': 'TemporalSelfAttention',
+                                                                                    'embed_dims': 256,
+                                                                                    'num_levels': 1},
+                                                                                   {'type': 'GeometrySptialCrossAttention',
+                                                                                    'pc_range': [-15.0,
+                                                                                                 -30.0,
+                                                                                                 -2.0,
+                                                                                                 15.0,
+                                                                                                 30.0,
+                                                                                                 2.0],
+                                                                                    'attention': {'type': 'GeometryKernelAttention',
+                                                                                                  'embed_dims': 256,
+                                                                                                  'num_heads': 4,
+                                                                                                  'dilation': 1,
+                                                                                                  'kernel_size': (3,
+                                                                                                                  5),
+                                                                                                  'num_levels': 1},
+                                                                                    'embed_dims': 256,
+                                                                                    'num_cams': 12}],
+                                                                     'feedforward_channels': 512,
+                                                                     'ffn_dropout': 0.1,
+                                                                     'operation_order': ('self_attn',
+                                                                                         'norm',
+                                                                                         'cross_attn',
+                                                                                         'norm',
+                                                                                         'ffn',
+                                                                                         'norm')}},
+                                   'decoder': {'type': 'MapTRDecoder',
+                                               'num_layers': 6,
+                                               'return_intermediate': True,
+                                               'transformerlayers': {'type': 'DetrTransformerDecoderLayer',
+                                                                     'attn_cfgs': [{'type': 'MultiheadAttention',
+                                                                                    'embed_dims': 256,
+                                                                                    'num_heads': 8,
+                                                                                    'dropout': 0.1},
+                                                                                   {'type': 'CustomMSDeformableAttention',
+                                                                                    'embed_dims': 256,
+                                                                                    'num_levels': 1}],
+                                                                     'feedforward_channels': 512,
+                                                                     'ffn_dropout': 0.1,
+                                                                     'operation_order': ('self_attn',
+                                                                                         'norm',
+                                                                                         'cross_attn',
+                                                                                         'norm',
+                                                                                         'ffn',
+                                                                                         'norm')}},
+                                   'num_cams': 12},
+                   'bbox_coder': {'type': 'MapTRNMSFreeCoder',
+                                  'post_center_range': [-20, -35, -20, -35, 20, 35, 20, 35],
+                                  'pc_range': [-15.0, -30.0, -2.0, 15.0, 30.0, 2.0],
+                                  'max_num': 50,
+                                  'voxel_size': [0.15, 0.15, 4],
+                                  'num_classes': 3},
+                   'positional_encoding': {'type': 'LearnedPositionalEncoding',
+                                           'num_feats': 128,
+                                           'row_num_embed': 200,
+                                           'col_num_embed': 100},
+                   'loss_cls': {'type': 'FocalLoss',
+                                'use_sigmoid': True,
+                                'gamma': 2.0,
+                                'alpha': 0.25,
+                                'loss_weight': 2.0},
+                   'loss_bbox': {'type': 'L1Loss', 'loss_weight': 0.0},
+                   'loss_iou': {'type': 'GIoULoss', 'loss_weight': 0.0},
+                   'loss_pts': {'type': 'PtsL1Loss', 'loss_weight': 5.0},
+                   'loss_dir': {'type': 'PtsDirCosLoss', 'loss_weight': 0.005}},
+ 'train_cfg': {'pts': {'grid_size': [512, 512, 1],
+                       'voxel_size': [0.15, 0.15, 4],
+                       'point_cloud_range': [-15.0, -30.0, -2.0, 15.0, 30.0, 2.0],
+                       'out_size_factor': 4,
+                       'assigner': {'type': 'MapTRAssigner',
+                                    'cls_cost': {'type': 'FocalLossCost', 'weight': 2.0},
+                                    'reg_cost': {'type': 'BBoxL1Cost',
+                                                 'weight': 0.0,
+                                                 'box_format': 'xywh'},
+                                    'iou_cost': {'type': 'IoUCost',
+                                                 'iou_mode': 'giou',
+                                                 'weight': 0.0},
+                                    'pts_cost': {'type': 'OrderedPtsL1Cost', 'weight': 5},
+                                    'pc_range': [-15.0, -30.0, -2.0, 15.0, 30.0, 2.0]}}}}
+
+optimizer = {'type': 'AdamW',
+ 'lr': 0.0006,
+ 'paramwise_cfg': {'custom_keys': {'img_backbone': {'lr_mult': 0.1}}},
+ 'weight_decay': 0.01}
+
+optimizer_config = {'grad_clip': {'max_norm': 35, 'norm_type': 2}}
+
+lr_config = {'policy': 'CosineAnnealing',
+ 'warmup': 'linear',
+ 'warmup_iters': 500,
+ 'warmup_ratio': 0.3333333333333333,
+ 'min_lr_ratio': 0.001}
+
+total_epochs = 24
+
+runner = {'type': 'EpochBasedRunner', 'max_epochs': 24}
+
+fp16 = {'loss_scale': 512.0}
+
+PHENIKAA_USE_GT = False
+
+PHENIKAA_NUM_CAMS = 12
+
+PHENIKAA_CAMERA_ORDER = ['CAM_P_F',
+ 'CAM_P_FL',
+ 'CAM_P_FR',
+ 'CAM_P_B',
+ 'CAM_P_L',
+ 'CAM_P_R',
+ 'CAM_P_LB',
+ 'CAM_P_RB',
+ 'CAM_F_F',
+ 'CAM_F_L',
+ 'CAM_F_R',
+ 'CAM_F_B']
+
+PHENIKAA_INFOS = '/home/khanh247/Documents/Survey/phd/phenikaa/outputs/only_camera/Normal/phenikaa_maptr_infos_val.pkl'

@@ -1,74 +1,87 @@
-# Phenikaa HD Map — Online Lanelet / Vector HD Map
+# Phenikaa Vector HD Map Project
 
-Dự án luận văn: **Robust Online Lanelet-Level HD Map Construction** từ multi-camera, multi-LiDAR và (tuỳ chọn) static pointcloud map prior trên dữ liệu **Phenikaa**.
+Du an nay train va chay MapTR cho bai toan tao vector HD map tu camera Phenikaa, voi GT OSM duoc ve theo quy tac rieng cho 6 class:
+`lane_divider`, `road_edge_marking`, `stop_line`, `ped_crossing`, `boundary`, `speed_bump`.
 
-Phạm vi ngắn hạn (MVP):
-
-1. Baseline MapTRv2 camera / camera+LiDAR trên **nuScenes** (có GT map).
-2. Adapter + inference qualitative trên sequence **RESIDENTIAL_AREA** Phenikaa.
-3. (Nếu map.pcd khớp Pose) thêm static-map prior BEV.
-
-## Cấu trúc (tất cả trong `phenikaa/`)
+## Cau Truc Chinh
 
 ```text
 phenikaa/
-├── README.md
-├── requirements.txt          # env phenikaa (B0 tooling)
-├── docs/                     # lộ trình, khái niệm, hình mẫu
-├── configs/                  # ghi chú thí nghiệm E1/E2…
-├── phenikaa_hdmap/           # code chính đồ án
-├── scripts/
-├── tutorials/                # của Phenikaa (calib / viz) — không phải upstream
-├── third_party/MapTR/        # MapTRv2 opensource (branch maptrv2) nằm trong dự án
-│   ├── docs/install.md
-│   ├── requirement.txt       # extras nhỏ (shapely/av2)
-│   ├── ckpts/                # trọng số ResNet + MapTRv2
-│   └── data/ → ../../data/nuscenes/…
-├── data/
-│   ├── phenikaa/             # calib, sequences, maps
-│   └── nuscenes/             # raw mini + can_bus (thật, trong phenikaa)
-└── outputs/
+├── data/                 # data/raw, data/processed, data/external; khong push git
+├── outputs/              # ket qua build infos, train, infer, export, visualize
+├── configs/maptr/        # tat ca config MapTR dang dung
+├── scripts/maptr/        # pipeline script chay truc tiep bang Python
+├── src/phenikaa_maptr/   # helper noi bo cho pipeline
+├── third_party/          # MapTR runtime va checkpoint goc
+├── docs/                 # tai lieu nghien cuu, GT rule, pipeline, cleanup
+└── thesis_papers/        # paper, latex, figures cho luan van
 ```
 
-`Survey/test/` là **quá khứ** — không dùng cho đồ án.
+`Pipeline moi chay tu `scripts/maptr` va `configs/maptr`.
 
-## Hai môi trường
+## Data Layout
 
-| Env conda | File deps | Dùng cho |
-|-----------|-----------|----------|
-| `phenikaa` | [`requirements.txt`](requirements.txt) | B0 tutorials, data tooling |
-| `maptr` | [`requirements-maptr.txt`](requirements-maptr.txt) (+ [`environment-maptr.yml`](environment-maptr.yml)) | B1+ MapTRv2 |
+Du lieu goc cua cac scenario nam o:
 
-## Bắt đầu nhanh
+```text
+data/raw/<scenario>/
+```
+
+Vi du:
+
+```text
+data/raw/Normal/
+data/raw/road_work_traffic/
+data/raw/rain_low_light/
+data/raw/nuscenes/
+```
+
+Cac duong dan cu nhu `data/Normal` va `data/road_work_traffic` da duoc bo. Config va pipeline moi chi doc canonical path trong `data/raw`. Neu dung output `.pkl` cu duoc build truoc khi doi layout, nen rebuild lai infos tu raw.
+
+## Chay Pipeline
+
+Chay tung buoc bang runner tong:
 
 ```bash
-cd /home/khanh247/Documents/Survey/phenikaa
-
-# B0 — env phenikaa
-conda activate phenikaa
-python scripts/check_setup.py
-cd tutorials && python 05_load_pointcloud_information.py && python 11_all_things.py
-
-# B1 — env maptr
-conda activate maptr
-cd third_party/MapTR
-# xem configs/e1_nusc_camera.md
+cd /home/khanh247/Documents/Survey/phd/phenikaa
+/home/khanh247/miniconda3/envs/maptr/bin/python scripts/maptr/30_run_pipeline_from_config.py --steps infer,export,visualize
 ```
 
-## Tài liệu
+Chay tu dau den cuoi khi can rebuild/train:
 
-| File | Nội dung |
-|------|----------|
-| **[docs/HIEU_RO.md](docs/HIEU_RO.md)** | Hiểu khái niệm |
-| **[docs/LO_TRINH.md](docs/LO_TRINH.md)** | Lộ trình từng bước |
-| **[docs/mau/](docs/mau/)** | Hình mẫu |
-| [TASKS.md](TASKS.md) | Checklist |
-| [docs/DATA.md](docs/DATA.md) | Dữ liệu |
-| [docs/CHAY_B3_PHENIKAA.md](docs/CHAY_B3_PHENIKAA.md) | Lệnh chạy B3 Phenikaa |
-| [configs/e1_nusc_camera.md](configs/e1_nusc_camera.md) | Lệnh eval B1 |
+```bash
+/home/khanh247/miniconda3/envs/maptr/bin/python scripts/maptr/30_run_pipeline_from_config.py --steps raw_qa,pose_qa,gt_qa,build_infos,filter_infos,make_config,make_init,check_dataset,train,infer,export,visualize
+```
 
-## Quy ước
+Dry-run de xem lenh se chay:
 
-- Logic đồ án → `phenikaa_hdmap/`
-- Upstream MapTRv2 → `third_party/MapTR/` (patch tối thiểu)
-- Tutorials calib → `tutorials/` (thuộc Phenikaa)
+```bash
+/home/khanh247/miniconda3/envs/maptr/bin/python scripts/maptr/30_run_pipeline_from_config.py --steps infer,export,visualize --dry-run
+```
+
+## File Quan Trong Can Giu
+
+- Config: `configs/maptr/pipeline.yaml`, `configs/maptr/maptr_tiny_r50_phenikaa_12cam_train_osm.py`.
+- Source runtime: `third_party/MapTR_phenikaa/`, `scripts/maptr/`, `src/phenikaa_maptr/`.
+- Checkpoint da hoc: `checkpoints/road_work_traffic_maptr_epoch_4.pth`.
+- Checkpoint pretrained goc: `third_party/MapTR/ckpts/maptrv2_nusc_r50_24ep.pth`, `resnet50-19c8e357.pth`.
+- GT rule: `docs/03_GT_OSM_DRAWING_GUIDE_FULL.md`.
+
+## Sau Train
+
+Model hoc duoc nam trong checkpoint `.pth`, khong nam trong file `.log` hay `.pkl`.
+Dung checkpoint do de infer tren scenario khac bang cach sua `configs/maptr/pipeline.yaml`:
+
+- `scenario.name`: scenario can infer/export.
+- `scenario.checkpoint_scenario`: scenario chua checkpoint da train.
+- `paths.checkpoint`: mac dinh tro den `latest.pth` cua checkpoint_scenario.
+
+## Tai Lieu
+
+- `docs/01_REPOSITORY_STRUCTURE.md`: cau truc repo.
+- `docs/02_PIPELINE_FROM_RAW_TO_VECTOR_MAP.md`: pipeline tu raw den vector map.
+- `docs/03_GT_OSM_DRAWING_RULES.md`: rule ve GT ban ngan.
+- `docs/03_GT_OSM_DRAWING_GUIDE_FULL.md`: rule ve GT day du.
+- `docs/04_OUTPUTS_AND_CLEANUP.md`: nen giu/xoa output nao.
+- `docs/05_EXPERIMENTS_AND_CHECKPOINTS.md`: quan ly thuc nghiem/checkpoint.
+- `docs/06_THESIS_QA_CAMERA_ONLY_MAPTR.md`: cau hoi bao ve/hoi dap ky thuat.

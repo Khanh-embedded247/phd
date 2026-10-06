@@ -1,0 +1,154 @@
+# Config chung cho pipeline MapTR Phenikaa.
+# Chay tung buoc:
+#   /home/khanh247/miniconda3/envs/maptr/bin/python #   /home/khanh247/Documents/Survey/phd/phenikaa/benchmark_maptr/30_run_pipeline_from_config.py --steps infer,export,visualize
+
+project:
+  phenikaa_root: /home/khanh247/Documents/Survey/phd/phenikaa
+  conda_python: /home/khanh247/miniconda3/envs/maptr/bin/python
+  maptr_root: ${PHENIKAA_ROOT}/benchmark_maptr/vendor/MapTR
+
+scenario:
+  name: road_work_traffic
+  data_root: ${PHENIKAA_ROOT}/data/${SCENARIO}
+  checkpoint_scenario: road_work_traffic
+
+paths:
+  model_config: ${PHENIKAA_ROOT}/benchmark_maptr/config/maptr_tiny_r50_phenikaa_12cam_train_osm.py
+  gt_osm: ${DATA_ROOT}/${SCENARIO}.osm
+  init_checkpoint: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${SCENARIO}/ckpts/maptr_init_12cam_partial.pth
+  checkpoint: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${CHECKPOINT_SCENARIO}/work_dirs/maptr_12cam_osm/latest.pth
+  infos: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${SCENARIO}/phenikaa_maptr_infos_full.pkl
+  final_dir: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${SCENARIO}/final_run/no_metric_full_data
+  intermediate_dir: ${FINAL_DIR}/_intermediate
+
+runtime:
+  cuda_visible_devices: "0"
+  pytorch_cuda_alloc_conf: max_split_size_mb:64
+  ld_library_path_extra:
+    - /usr/lib/x86_64-linux-gnu
+    - /usr/local/cuda/lib64
+    - /usr/local/cuda-12.8/lib64
+    - /home/khanh247/miniconda3/envs/maptr/lib
+
+raw_qa:
+  enabled: true
+  max_camera_dt_sec: 0.025
+  max_image_checks: 24
+
+pose_qa:
+  enabled: true
+  max_dt_sec: 0.20
+  max_speed_mps: 30.0
+  max_yaw_rate_dps: 120.0
+
+gt_qa:
+  enabled: true
+  strict_missing_semantic: false
+
+build_infos:
+  rebuild: true
+  split: full
+  start_index: 0
+  max_samples: 0
+  progress_every: 10
+  max_camera_dt_sec: 0.001
+  warn_lidar_dt_sec: 0.05
+  image_mode: undistorted
+  overwrite_synced_lidar: false
+
+filter_infos:
+  enabled: true
+  min_gt_vectors: 1
+  progress_every: 500
+
+train_data:
+  datasets:
+    - name: Normal
+      infos: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/Normal/phenikaa_maptr_infos_full_gt_positive.pkl
+      gt_osm: ${PHENIKAA_ROOT}/data/Normal/normal_main.osm
+      repeat: 1
+    - name: road_work_traffic
+      infos: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/road_work_traffic/phenikaa_maptr_infos_full_gt_positive.pkl
+      gt_osm: ${PHENIKAA_ROOT}/data/road_work_traffic/road_work_traffic.osm
+      repeat: 1
+
+train:
+  enabled: true
+  make_config: true
+  make_init_checkpoint: true
+  check_dataset: true
+  check_num_samples: 30
+  source_checkpoint: ${PHENIKAA_ROOT}/third_party/MapTR/ckpts/maptrv2_nusc_r50_24ep.pth
+  work_dir: ${PHENIKAA_ROOT}/outputs/benchmark_maptr/${SCENARIO}/work_dirs/maptr_12cam_osm
+  max_epochs: 4
+  lr: 0.0002
+  image_scale: 0.25
+  samples_per_gpu: 1
+  workers_per_gpu: 4
+  gpus: 1
+
+inference:
+  enabled: true
+  start_index: 0
+  num_samples: 0
+  score_thresh: 0.30
+  image_scale: 0.25
+  workers_per_gpu: 0
+  no_gt: true
+
+export_osm:
+  enabled: true
+  score_thresh: 0.45
+  graph:
+    enabled: true
+    out_osm: ${FINAL_DIR}/predicted_vector_map_graph.osm
+    min_length_m: 0.40
+    dedup_chamfer_m: 0.65
+    dedup_cell_m: 2.0
+    sample_step: 1
+    max_lines: 0
+  thin:
+    enabled: true
+    out_osm: ${FINAL_DIR}/predicted_vector_map_thin.osm
+    merge_mode: spatial_graph
+    min_length_m: 0.40
+    merge_chamfer_m: 0.45
+    merge_center_m: 2.0
+    merge_heading_deg: 25.0
+    thin_grid_m: 0.75
+    min_cell_observations: 3
+    min_edge_observations: 2
+    min_graph_points: 4
+    graph_smooth_window: 3
+    stop_cluster_m: 3.0
+    stop_heading_deg: 45.0
+    min_stop_cluster_size: 4
+    stop_min_length_m: 1.0
+    stop_max_length_m: 12.0
+    stop_line_points: 5
+    debug_tags: false
+    create_lanelet_relations: false
+    lateral_bin_m: 0.25
+    min_lateral_bin_ratio: 0.02
+    min_lateral_cluster_points: 500
+    s_bin_m: 1.0
+    min_bin_observations: 3
+    min_line_points: 8
+    smooth_window: 7
+
+visualize:
+  enabled: true
+  start: 0
+  max_samples: 20
+  score_thresh: 0.30
+  cam_width: 320
+  map_width: 900
+  map_height: 1600
+  paper_out_dir: ${FINAL_DIR}/visualizations/paper_style
+  map_out_dir: ${FINAL_DIR}/visualizations/map_style
+  professional_out_dir: ${FINAL_DIR}/visualizations/professional
+  professional_max_samples: 6
+  professional_step: 250
+  professional_global_width: 2200
+  professional_global_height: 1500
+  professional_local_size: 900

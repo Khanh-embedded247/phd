@@ -1,0 +1,1 @@
+../benchmark_maptr/config/maptr_tiny_r50_phenikaa_12cam_train_osm.py
